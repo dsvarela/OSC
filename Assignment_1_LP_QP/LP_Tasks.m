@@ -32,7 +32,7 @@ Aa = [price_X, price_Y; 1, 1];
 ba = [24000 + 300*E1; 12];
 
 
-[task1a_sol,fval,exitflag,output,lambda] = linprog(cTa,Aa,ba,[],[],[]);
+[task1a_sol,fval,exitflag] = linprog(cTa,Aa,ba,[],[],[]);
 X = round(task1a_sol(1));
 Y = round(task1a_sol(2));
 
@@ -66,7 +66,7 @@ end
 
 %Task 1c) - single LP
 
-stoopid_c = [-pow_X; -pow_Y;  %Year 1
+single_c = [-pow_X; -pow_Y;  %Year 1
             -pow_X; -pow_Y;  %Year 2
             -pow_X; -pow_Y;  %Year 3
             -pow_X; -pow_Y;  %Year 4
@@ -76,15 +76,15 @@ stoopid_c = [-pow_X; -pow_Y;  %Year 1
             -pow_X; -pow_Y;  %Year 8
             -pow_X; -pow_Y;  %Year 9
             -pow_X; -pow_Y]; %Year 10
-stoopid_A = zeros(20,20);
-stoopid_b = zeros(20,1);
+single_A = zeros(20,20);
+single_b = zeros(20,1);
 for i = 1:10
-    stoopid_A(i,2*i-1) = total_price_X(i);
-    stoopid_A(i,2*i) = total_price_Y(i);
-    stoopid_A(10+i, 2*i-1) = 1;
-    stoopid_A(10+i, 2*i) = 1;
-    stoopid_b(i) = Budget(i);
-    stoopid_b(10+i) = 12;
+    single_A(i,2*i-1) = total_price_X(i);
+    single_A(i,2*i) = total_price_Y(i);
+    single_A(10+i, 2*i-1) = 1;
+    single_A(10+i, 2*i) = 1;
+    single_b(i) = Budget(i);
+    single_b(10+i) = 12;
 end
 lb = zeros(1,20);
-[sol,fval,exitflag,output,lambda] = linprog(stoopid_c,stoopid_A,stoopid_b,[],[],lb);
+[sol,fval,exitflag] = linprog(single_c,single_A,single_b,[],[],lb);

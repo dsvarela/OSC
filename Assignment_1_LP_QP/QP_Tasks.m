@@ -17,8 +17,9 @@ D_b3 = 2;
 E1 = D_a1 + D_b1;
 E2 = D_a2 + D_b2;
 E3 = D_a3 + D_b3;
+
 %% Loading Data
-measurements = table2array(readtable('measurements_physical.csv', 'HeaderLines',1));
+measurements = table2array(readtable('measurements.csv', 'HeaderLines',1));
 
 delta_t = 3600;
 q_dot_occ = measurements(:,1);  % kW
@@ -49,11 +50,11 @@ a3 = x3(3);
 A = 1-a3 * delta_t;
 B = delta_t * [a1 a2 a2 -a2 a3];
 
-sum = 0;
+soma = 0;
 for i = 1:2159
     s1 = A * T_b(i);
     s2 = B*[q_dot_solar(i); q_dot_occ(i) ; q_dot_ac(i) ; q_dot_vent(i); T_amb(i)];
-    sum = sum + (T_b(i+1) - (s1 + s2))^2;
+    soma = soma + (T_b(i+1) - (s1 + s2))^2;
 end
 
 
@@ -93,6 +94,70 @@ end
 lb = [T_min * ones(1,N), zeros(1,N)]';
 ub = [T_max * ones(1,N), q_ac_max * ones(1,N)]';
 
-options = optimoptions('quadprog', 'MaxIterations', 250);
+for o = 1:length(q_dot_occ)
+    if q_dot_occ(o) <= 0
+        lb(o) = -inf;
+        ub(o) = inf;
+    end
+end
+    
+options = optimoptions('quadprog', 'MaxIterations', 1000);
 [x4,fval4,exitflag4] = quadprog(H,c,[],[],Aeq,beq,lb,ub,[],options);
 
+%% Task 4 Alternative, Maybe
+N = 2160;
+var  = (E2+1)/10;
+H_alt = [2*var*eye(N), zeros(N); zeros(N), zeros(N)];
+c_alt = [2*var*T_ref*ones(1,N), Phi'*delta_t]';
+
+% Equality Constraints
+Aeq_alt = zeros(N, 2*N);
+beq_alt = zeros(N,1);
+Aeq_alt(1,1) = 1;
+beq_alt(1) = T_b1;
+for i = 2:N
+    Aeq_alt(i,i) = a3*delta_t - 1;
+    Aeq_alt(i,i+1) = 1;
+    Aeq_alt(i, N+i) = - a2*delta_t;
+    beq_alt(i) = delta_t * (a1*q_dot_solar(i) + a2*(q_dot_occ(i) - q_dot_vent(i)) + a3 * T_amb(i));
+end
+
+[x4_alt,fval4,exitflag4] = quadprog(H_alt,c_alt,[],[],Aeq_alt,beq_alt,lb,ub,[],options);
+
+%% Test section
+aux_opt_Tbp1 = x4(1:2160);
+opt_Tb = x4_alt(1:2160);
+
+opt_qac = x4(2161:end);
+opt_qac_alt = x4_alt(2161:end);
+
+opt_Tbp1 = zeros(1, 2161);
+opt_Tbp1(2:end) = aux_opt_Tbp1;
+opt_Tbp1(1) = T_b1;
+
+opt_Tb(2161) = (1-a3*delta_t)*opt_Tb(2160) + a2*delta_t*opt_qac_alt(2160) + delta_t * (a1*q_dot_solar(2160) + a2*(q_dot_occ(2160) - q_dot_vent(2160)) + a3 * T_amb(2160));
+
+subplot(3,1,1);
+plot(1:2161, opt_Tbp1, 1:2161, opt_Tb);
+legend('Tbp1 in the equation','Tb in the equation')
+subplot(3,1,2);
+plot(1:2161, opt_Tbp1)
+legend('Tbp1 in the equation')
+subplot(3,1,3);
+plot(1:2161, opt_Tb)
+legend('Tbp in the equation')
+
+figure;
+subplot(3,1,1);
+plot(1:2160, opt_qac, 1:2160, opt_qac_alt);
+legend('Tbp1 in the equation','Tb in the equation')
+subplot(3,1,2);
+plot(1:2160, opt_qac)
+legend('Tbp1 in the equation')
+subplot(3,1,3);
+plot(1:2160, opt_qac_alt)
+legend('Tbp in the equation')
+
+temps = [opt_Tbp1' opt_Tb];
+
+qac = [opt_qac opt_qac_alt];

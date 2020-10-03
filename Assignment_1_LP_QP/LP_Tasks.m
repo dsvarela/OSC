@@ -21,10 +21,11 @@ pow_Y = 2500; %Watts
 price_X = 3000; %€
 price_Y = 1500; %€
 
-%% a)
-% Note: Task 1a) was solved without considering maintenance costs.
+%% Task 1b)
+% Problem  Formulation:
 %[x1,x2]=[X,Y];
 % max (x1*pow_x + x2*pow_y) = min (-x1*pow_x - x2*pow_y)
+
 cTa = [-pow_X; -pow_Y];
 % X*price_X + Y*price_Y <= 24000 + 300*E1
 % X + Y <= 12
@@ -32,13 +33,13 @@ Aa = [price_X, price_Y; 1, 1];
 ba = [24000 + 300*E1; 12];
 
 
-[task1a_sol,fval,exitflag] = linprog(cTa,Aa,ba,[],[],[]);
-X = round(task1a_sol(1));
-Y = round(task1a_sol(2));
+[x1a,fval,exitflag] = linprog(cTa,Aa,ba,[],[],[]);
+X = round(x1a(1));
+Y = round(x1a(2));
 
 Max_Power = X*pow_X + Y*pow_Y;
 
-%% b)
+%% Task 1c)
 Maintenance_X = [200+E2 200+2*E2 200+3*E2 300+4*E2 300+5*E2 ...
     400+5*E2 500+5*E2 600+5*E2 700+5*E2 800+5*E2]';
 Maintenance_Y = [50+E3 50+2*E3 100+3*E3 150+4*E3 150+5*E3 200+5*E3 ...
@@ -49,7 +50,7 @@ Maintenance_Y = [50+E3 50+2*E3 100+3*E3 150+4*E3 150+5*E3 200+5*E3 ...
 % X*total_price_X + Y*total_price_Y <= Budget
 % X + Y <= 12
 
-sol_1c = zeros(10,2);
+% Build Vectors of Total Budget and Cost for units X and Y
 total_price_X =  zeros(10,1);
 total_price_Y =  zeros(10,1);
 Budget =  zeros(10,1);
@@ -59,65 +60,19 @@ for N = 1:10
     % Total price of Y = 1500 + N year maintenance
     total_price_Y(N) = 1500 + sum(Maintenance_Y(1:N));
     Budget(N) = 24000 + 300*E1 + (N)*(4000+100*E1);
-    
-    cTB = [-pow_X; -pow_Y];
-    AB = [total_price_X(N), total_price_Y(N); 1, 1];
-    bB = [Budget(N); 12];
-    [sol_1c(N,:)] = linprog(cTB,AB,bB,[],[],[0 0]);
 end
 
 
+% % Solve Task 1c) as 10 different Linear Programming Problems.
+% sol_1c = zeros(10,2);
+% for N = 1:10
+%     cTB = [-pow_X; -pow_Y];
+%     AB = [total_price_X(N), total_price_Y(N); 1, 1];
+%     bB = [Budget(N); 12];
+%     [sol_1c(N,:)] = linprog(cTB,AB,bB,[],[],[0 0]);
+% end
 
-for i = 1:10
-    % x and y values are not integers, so they can be rounded up or down,
-    % which will result in not optimal solutions (and unfeasible ones)
-    
-    % x and y agragate all possible combinations of rounded up or down
-    % values of our optimal solutions
-    x = [floor(sol_1c(i,1)), ceil(sol_1c(i,1))];
-    y = [floor(sol_1c(i,2)), ceil(sol_1c(i,2))];
-    units = zeros(2,2);
-    price = zeros(2,2);
-    max_pow = 0;
-    tot_pow = 0;
-    
-    % we now cycle through all possible solutions pairs x,y to delete the
-    % ones that are not within the constraints.
-    for j=1:2
-        for k = 1:2
-            units(j,k) = x(j) + y(k);
-            price(j,k) =total_price_X(i)*x(j) + total_price_Y(i)*y(k);
-            if units(j,k) > 12 || price(j,k) > Budget(i)
-                price(j,k) = 0;
-                units(j,k) = 0;
-            end
-        end
-    end
-    
-    % for the feasible integer solutions found, we cycle through them to
-    % see which will generate the most power. That will be our opitmal
-    % solution.
-    for j=1:2
-        for k = 1:2
-            if units(j,k) ~= 0
-                tot_pow = pow_X*x(j) + pow_Y*y(k);
-                if tot_pow >= max_pow
-                    max_pow = tot_pow;
-                    opt_x = x(j);
-                    opt_y = y(k);
-                    left_over = Budget(i)-price(j,k);
-                end
-            end
-        end
-    end
-    
-    sol_1c(i,3) = opt_x;
-    sol_1c(i,4) = opt_y;
-    sol_1c(i,5) = max_pow;
-    sol_1c(i,6) = left_over;
-end
-%% Task 1c) - single LP
-
+% Task 1c) - single LP
 single_c = [-pow_X; -pow_Y;  %Year 1
     -pow_X; -pow_Y;  %Year 2
     -pow_X; -pow_Y;  %Year 3
@@ -139,11 +94,12 @@ for i = 1:10
     single_b(10+i) = 12;
 end
 
-[sol_1c_single] = linprog(single_c,single_A,single_b,[],[]);
+[x1c] = linprog(single_c,single_A,single_b,[],[]);
 
-single_organized = zeros(10,2);
+%% Post Processing of the Obtained Solutions.
+x1c_organized = zeros(10,2);
 for i = 1:10
-    single_organized(i,:) = [sol_1c_single(2*i-1), sol_1c_single(2*i)];
+    x1c_organized(i,:) = [x1c(2*i-1), x1c(2*i)];
 end
 for i = 1:10
     % x and y values are not integers, so they can be rounded up or down,
@@ -151,8 +107,8 @@ for i = 1:10
     
     % x and y agragate all possible combinations of rounded up or down
     % values of our optimal solutions
-    x = [floor(single_organized(i,1)), ceil(single_organized(i,1))];
-    y = [floor(single_organized(i,2)), ceil(single_organized(i,2))];
+    x = [floor(x1c_organized(i,1)), ceil(x1c_organized(i,1))];
+    y = [floor(x1c_organized(i,2)), ceil(x1c_organized(i,2))];
     units = zeros(2,2);
     price = zeros(2,2);
     max_pow = 0;
@@ -188,8 +144,8 @@ for i = 1:10
         end
     end
     
-    single_organized(i,3) = opt_x;
-    single_organized(i,4) = opt_y;
-    single_organized(i,5) = max_pow;
-    single_organized(i,6) = left_over;
+    x1c_organized(i,3) = opt_x;
+    x1c_organized(i,4) = opt_y;
+    x1c_organized(i,5) = max_pow;
+    x1c_organized(i,6) = left_over;
 end

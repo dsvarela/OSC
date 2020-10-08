@@ -226,29 +226,41 @@ ub = [T_max * ones(1,N-1), q_ac_max * ones(1,N)]';
 
 % Cycle through q_dot_occ to find values equal to zero. Lift constraint on
 % corresponding lower and upper bounds.
+% rows_to_remove = 0;
+% j = 1;
 for i = 1:N-1
     if q_dot_occ(i+1) <= 0
         lb(i) = -inf;
         ub(i) = inf;
+%         rows_to_remove(j)=i;
+%         rows_to_remove(j+1)=N-1+i;
+%         j = j+2;
     end
 end
 
+% Aineq = [eye(N-1), zeros(N-1,N); -eye(N-1), zeros(N-1,N);...
+%     zeros(N,N-1), eye(N); zeros(N,N-1), -eye(N)];
+% bineq = [T_max * ones(1,N-1), T_min * ones(1,N-1),...
+%     q_ac_max * ones(1,N), zeros(1,N), ]';
+% Aineq(rows_to_remove,:)=[];
+% bineq(rows_to_remove)=[];
+
 % Equality Constraints, A Matrix and b Vector.
-Aeq_alt = zeros(N-1, 2*N-1);
-beq_alt = zeros(N-1,1);
-Aeq_alt(1,1) = 1;
-Aeq_alt(1,N) = - a2*delta_t;
-beq_alt(1) = (1-a3*delta_t)*T_b1 + delta_t * (a1*q_dot_solar(1) + a2*(q_dot_occ(1) - q_dot_vent(1)) + a3 * T_amb(1));
+Aeq = zeros(N-1, 2*N-1);
+beq = zeros(N-1,1);
+Aeq(1,1) = 1;
+Aeq(1,N) = - a2*delta_t;
+beq(1) = (1-a3*delta_t)*T_b1 + delta_t * (a1*q_dot_solar(1) + a2*(q_dot_occ(1) - q_dot_vent(1)) + a3 * T_amb(1));
 for i = 2:N-1
-    Aeq_alt(i,i-1) = a3*delta_t - 1;
-    Aeq_alt(i,i) = 1;
-    Aeq_alt(i, N+i-1) = - a2*delta_t;
-    beq_alt(i) = delta_t * (a1*q_dot_solar(i) + a2*(q_dot_occ(i) - q_dot_vent(i)) + a3 * T_amb(i));
+    Aeq(i,i-1) = a3*delta_t - 1;
+    Aeq(i,i) = 1;
+    Aeq(i, N+i-1) = - a2*delta_t;
+    beq(i) = delta_t * (a1*q_dot_solar(i) + a2*(q_dot_occ(i) - q_dot_vent(i)) + a3 * T_amb(i));
 end
 
 % Solution to the problem
 options = optimoptions('quadprog', 'MaxIterations', 500);
-[x4,~] = quadprog(H,c,[],[],Aeq_alt,beq_alt,lb,ub,[],options);
+[x4,~] = quadprog(H,c,[],[],Aeq,beq,lb,ub,[],options);
 
 %% Task 4 as Described in Section 4.3.
 % 

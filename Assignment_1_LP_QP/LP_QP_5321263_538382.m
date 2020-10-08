@@ -188,14 +188,26 @@ A = 1-a3 * delta_t;
 B = delta_t * [a1 a2 a2 -a2 a3];
 
 % Mean Square Error Computation for results discussion
-mse = 0;
+mse = zeros(1,2159);
+predicted_T_b = zeros(1,2159);
+total_mse = 0;
 for i = 1:2159
     s1 = A * T_b(i);
     s2 = B*[q_dot_solar(i); q_dot_occ(i) ; q_dot_ac(i) ; q_dot_vent(i); T_amb(i)];
-    mse = mse + (T_b(i+1) - (s1 + s2))^2;
+    predicted_T_b(i) = (s1 + s2);
+    mse(i) = (T_b(i+1) - predicted_T_b(i))^2;
+    total_mse = total_mse + mse(i);
 end
 
-clear mse
+hours = (1:2159);
+figure;
+plot(hours, predicted_T_b, hours, T_b(2:end));
+title('Plot of $T_b(k+1)$ calculated using $a_1$, $a_2$, $a_3$ vs. Actual $T_b(k+1)$ values.', 'Fontsize', 20, 'Interpreter', 'Latex');
+legend({'$T_{b}(k+1) (predicted)$', '$T_{b}(k+1)$'}, 'Location','northeast', 'Interpreter', 'Latex', 'Fontsize', 20);
+xlabel('Time [h]', 'Fontsize', 14, 'fontweight','bold');
+ylabel('Temperature [ºC]', 'Fontsize', 14, 'fontweight','bold');
+set(gca, 'Fontsize', 14)
+grid on
 
 %% Task 4 as Described in Section 4.2.
 N = 2160; % Horizon of Steps
